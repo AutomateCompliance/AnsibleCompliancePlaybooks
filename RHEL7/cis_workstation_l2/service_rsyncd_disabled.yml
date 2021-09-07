@@ -1,0 +1,55 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = disable
+# complexity = low
+# disruption = low
+- name: Ensure rsyncd service is diabled
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83334-3
+    - disable_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - service_rsyncd_disabled
+  tasks:
+
+    - name: Disable service rsyncd
+      block:
+
+        - name: Gather the service facts
+          service_facts: null
+
+        - name: Disable service rsyncd
+          systemd:
+            name: rsyncd.service
+            enabled: 'no'
+            state: stopped
+            masked: 'yes'
+          when: '"rsyncd.service" in ansible_facts.services'
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Unit Socket Exists - rsyncd.socket
+      command: systemctl list-unit-files rsyncd.socket
+      args:
+        warn: false
+      register: socket_file_exists
+      changed_when: false
+      ignore_errors: true
+      check_mode: false
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Disable socket rsyncd
+      systemd:
+        name: rsyncd.socket
+        enabled: 'no'
+        state: stopped
+        masked: 'yes'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - '"rsyncd.socket" in socket_file_exists.stdout_lines[1]'

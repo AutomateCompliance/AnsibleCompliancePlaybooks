@@ -1,0 +1,34 @@
+# platform = Red Hat Enterprise Linux 7,Red Hat Enterprise Linux 8,multi_platform_ol
+# reboot = true
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Disable graphical user interface
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83410-1
+    - DISA-STIG-RHEL-07-040730
+    - NIST-800-53-CM-6(b)
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - reboot_required
+    - restrict_strategy
+    - xwindows_remove_packages
+  tasks:
+
+    - name: Ensure xorg packages are removed
+      package:
+        name:
+          - xorg-x11-server-Xorg
+          - xorg-x11-server-common
+          - xorg-x11-server-utils
+        state: absent
+
+    - name: Switch to multi-user runlevel
+      file:
+        src: /usr/lib/systemd/system/multi-user.target
+        dest: /etc/systemd/system/default.target
+        state: link
+        force: true

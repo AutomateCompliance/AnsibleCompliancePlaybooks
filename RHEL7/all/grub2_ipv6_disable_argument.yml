@@ -1,0 +1,49 @@
+# platform = multi_platform_rhel,multi_platform_fedora,multi_platform_ol,multi_platform_rhv
+# reboot = true
+# strategy = restrict
+# complexity = medium
+# disruption = low
+- name: Ensure IPv6 is disabled through kernel boot parameter
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-82886-3
+    - grub2_ipv6_disable_argument
+    - low_disruption
+    - low_severity
+    - medium_complexity
+    - reboot_required
+    - restrict_strategy
+  tasks:
+
+    - name: Gather the package facts
+      package_facts:
+        manager: auto
+
+    - name: check ipv6.disable argument exists
+      command: grep 'GRUB_CMDLINE_LINUX.*ipv6.disable=' /etc/default/grub
+      failed_when: false
+      register: argcheck
+      when: '"grub2-common" in ansible_facts.packages'
+
+    - name: replace existing ipv6.disable argument
+      replace:
+        path: /etc/default/grub
+        regexp: ipv6.disable=\w+
+        replace: ipv6.disable=1
+      when:
+        - '"grub2-common" in ansible_facts.packages'
+        - argcheck.rc == 0
+
+    - name: add ipv6.disable argument
+      replace:
+        path: /etc/default/grub
+        regexp: (GRUB_CMDLINE_LINUX=.*)"
+        replace: \1 ipv6.disable=1"
+      when:
+        - '"grub2-common" in ansible_facts.packages'
+        - argcheck.rc != 0
+
+    - name: update bootloader menu
+      command: /sbin/grubby --update-kernel=ALL --args="ipv6.disable=1"
+      when: '"grub2-common" in ansible_facts.packages'

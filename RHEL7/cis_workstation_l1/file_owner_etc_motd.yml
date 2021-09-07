@@ -1,0 +1,28 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Verify ownership of Message of the Day Banner
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83737-7
+    - configure_strategy
+    - file_owner_etc_motd
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+  tasks:
+
+    - name: Test for existence /etc/motd
+      stat:
+        path: /etc/motd
+      register: file_exists
+
+    - name: Ensure owner 0 on /etc/motd
+      file:
+        path: /etc/motd
+        owner: '0'
+      when: file_exists.stat is defined and file_exists.stat.exists

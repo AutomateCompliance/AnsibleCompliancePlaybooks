@@ -1,0 +1,33 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Verify Permissions on /etc/hosts.allow
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83828-4
+    - configure_strategy
+    - file_permissions_etc_hosts_allow
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+  tasks:
+
+    - name: Test for existence /etc/hosts.allow
+      stat:
+        path: /etc/hosts.allow
+      register: file_exists
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Ensure permission 0644 on /etc/hosts.allow
+      file:
+        path: /etc/hosts.allow
+        mode: '0644'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - file_exists.stat is defined and file_exists.stat.exists

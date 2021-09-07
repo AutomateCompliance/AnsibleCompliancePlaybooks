@@ -1,0 +1,37 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = enable
+# complexity = low
+# disruption = low
+- name: Enable Process Accounting (psacct)
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80265-2
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-CM-6(a)
+    - enable_strategy
+    - low_complexity
+    - low_disruption
+    - low_severity
+    - no_reboot_needed
+    - service_psacct_enabled
+  tasks:
+
+    - name: Enable service psacct
+      block:
+
+        - name: Gather the package facts
+          package_facts:
+            manager: auto
+
+        - name: Enable service psacct
+          service:
+            name: psacct
+            enabled: 'yes'
+            state: started
+            masked: 'no'
+          when:
+            - '"psacct" in ansible_facts.packages'
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

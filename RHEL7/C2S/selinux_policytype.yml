@@ -1,0 +1,57 @@
+# platform = multi_platform_rhel,multi_platform_fedora,multi_platform_ol,multi_platform_rhv
+# reboot = true
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Configure SELinux Policy
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_selinux_policy_name: targeted
+  tags:
+    - CCE-27279-9
+    - DISA-STIG-RHEL-07-020220
+    - NIST-800-171-3.1.2
+    - NIST-800-171-3.7.2
+    - NIST-800-53-AC-3
+    - NIST-800-53-AC-3(3)(a)
+    - NIST-800-53-AU-9
+    - NIST-800-53-SC-7(21)
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - reboot_required
+    - restrict_strategy
+    - selinux_policytype
+  tasks:
+
+    - name: Configure SELinux Policy
+      block:
+
+        - name: Check for duplicate values
+          lineinfile:
+            path: /etc/selinux/config
+            create: false
+            regexp: ^SELINUXTYPE=
+            state: absent
+          check_mode: true
+          changed_when: false
+          register: dupes
+
+        - name: Deduplicate values from /etc/selinux/config
+          lineinfile:
+            path: /etc/selinux/config
+            create: false
+            regexp: ^SELINUXTYPE=
+            state: absent
+          when: dupes.found is defined and dupes.found > 1
+
+        - name: Insert correct line to /etc/selinux/config
+          lineinfile:
+            path: /etc/selinux/config
+            create: true
+            regexp: ^SELINUXTYPE=
+            line: SELINUXTYPE={{ var_selinux_policy_name }}
+            state: present
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

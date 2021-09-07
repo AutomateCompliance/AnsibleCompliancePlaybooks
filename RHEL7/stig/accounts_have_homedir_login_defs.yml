@@ -1,0 +1,52 @@
+# platform = Red Hat Enterprise Linux 7,Red Hat Enterprise Linux 8,Red Hat Virtualization 4,multi_platform_wrlinux,multi_platform_ol,multi_platform_sle,multi_platform_fedora
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Ensure Home Directories are Created for New Users
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80434-4
+    - DISA-STIG-RHEL-07-020610
+    - accounts_have_homedir_login_defs
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+  tasks:
+
+    - name: Gather the package facts
+      package_facts:
+        manager: auto
+
+    - name: Ensure new users receive home directories
+      block:
+
+        - name: Check for duplicate values
+          lineinfile:
+            path: /etc/login.defs
+            create: false
+            regexp: ^\s*CREATE_HOME\s+
+            state: absent
+          check_mode: true
+          changed_when: false
+          register: dupes
+
+        - name: Deduplicate values from /etc/login.defs
+          lineinfile:
+            path: /etc/login.defs
+            create: false
+            regexp: ^\s*CREATE_HOME\s+
+            state: absent
+          when: dupes.found is defined and dupes.found > 1
+
+        - name: Insert correct line to /etc/login.defs
+          lineinfile:
+            path: /etc/login.defs
+            create: true
+            regexp: ^\s*CREATE_HOME\s+
+            line: CREATE_HOME yes
+            state: present
+      when: '"shadow-utils" in ansible_facts.packages'

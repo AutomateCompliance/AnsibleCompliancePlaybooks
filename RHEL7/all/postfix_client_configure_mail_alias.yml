@@ -1,0 +1,30 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Configure System to Forward All Mail For The Root Account
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_postfix_root_mail_alias: system.administrator@mail.mil
+  tags:
+    - CCE-82380-7
+    - NIST-800-53-CM-6(a)
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - low_severity
+    - no_reboot_needed
+    - postfix_client_configure_mail_alias
+  tasks:
+
+    - name: Make sure that that "/etc/aliases" has a defined value for root
+      lineinfile:
+        path: /etc/aliases
+        line: 'root: {{ var_postfix_root_mail_alias }}'
+        regexp: ^(?:[rR][oO][oO][tT]|"[rR][oO][oO][tT]")\s*:\s*(.+)$
+        create: true
+        state: present
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

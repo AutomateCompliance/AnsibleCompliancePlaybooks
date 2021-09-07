@@ -1,0 +1,27 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = disable
+# complexity = low
+# disruption = low
+- name: Uninstall Sendmail Package
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80288-4
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-CM-7(a)
+    - NIST-800-53-CM-7(b)
+    - disable_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - package_sendmail_removed
+  tasks:
+
+    - name: Ensure sendmail is removed
+      package:
+        name: sendmail
+        state: absent
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

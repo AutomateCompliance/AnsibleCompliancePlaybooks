@@ -1,0 +1,32 @@
+# platform = multi_platform_rhel,multi_platform_fedora,multi_platform_ol,multi_platform_rhv,multi_platform_ubuntu,multi_platform_sle
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Disable Modprobe Loading of USB Storage Driver
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-27277-3
+    - DISA-STIG-RHEL-07-020100
+    - NIST-800-171-3.1.21
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-CM-7(a)
+    - NIST-800-53-CM-7(b)
+    - NIST-800-53-MP-7
+    - disable_strategy
+    - kernel_module_usb-storage_disabled
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - reboot_required
+  tasks:
+
+    - name: Ensure kernel module 'usb-storage' is disabled
+      lineinfile:
+        create: true
+        dest: /etc/modprobe.d/usb-storage.conf
+        regexp: usb-storage
+        line: install usb-storage /bin/true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

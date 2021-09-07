@@ -1,0 +1,63 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Specify Additional Remote NTP Servers
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_multiple_time_servers: 0.pool.ntp.org,1.pool.ntp.org,2.pool.ntp.org,3.pool.ntp.org
+  tags:
+    - CCE-27012-4
+    - NIST-800-53-AU-8(1)(a)
+    - NIST-800-53-AU-8(2)
+    - NIST-800-53-CM-6(a)
+    - PCI-DSS-Req-10.4.3
+    - chronyd_or_ntpd_specify_multiple_servers
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+  tasks:
+
+    - name: Detect if chrony configuration file is present
+      find:
+        path: /etc
+        patterns: chrony.conf
+      register: chrony_server_config
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Configure multiple time servers in chrony config
+      lineinfile:
+        path: /etc/chrony.conf
+        line: server {{ item }}
+        state: present
+        create: true
+      loop: '{{ var_multiple_time_servers.split(",") }}'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - chrony_server_config.matched == 1
+
+    - name: Detect if NTP configuration file is present
+      find:
+        path: /etc
+        patterns: ntp.conf
+      register: ntp_server_config
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Configure multiple time servers in NTP config
+      lineinfile:
+        path: /etc/chrony.conf
+        line: pool {{ item }}
+        state: present
+        create: true
+      loop: '{{ var_multiple_time_servers.split(",") }}'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - ntp_server_config.matched == 1

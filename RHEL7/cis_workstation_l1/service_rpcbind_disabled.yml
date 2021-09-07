@@ -1,0 +1,55 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = disable
+# complexity = low
+# disruption = low
+- name: Disable rpcbind Service
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80230-6
+    - disable_strategy
+    - low_complexity
+    - low_disruption
+    - low_severity
+    - no_reboot_needed
+    - service_rpcbind_disabled
+  tasks:
+
+    - name: Disable service rpcbind
+      block:
+
+        - name: Gather the service facts
+          service_facts: null
+
+        - name: Disable service rpcbind
+          systemd:
+            name: rpcbind.service
+            enabled: 'no'
+            state: stopped
+            masked: 'yes'
+          when: '"rpcbind.service" in ansible_facts.services'
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Unit Socket Exists - rpcbind.socket
+      command: systemctl list-unit-files rpcbind.socket
+      args:
+        warn: false
+      register: socket_file_exists
+      changed_when: false
+      ignore_errors: true
+      check_mode: false
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Disable socket rpcbind
+      systemd:
+        name: rpcbind.socket
+        enabled: 'no'
+        state: stopped
+        masked: 'yes'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - '"rpcbind.socket" in socket_file_exists.stdout_lines[1]'

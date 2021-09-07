@@ -1,0 +1,48 @@
+# platform = multi_platform_rhel,multi_platform_fedora,multi_platform_ol,multi_platform_sle
+# reboot = false
+# strategy = unknown
+# complexity = low
+# disruption = medium
+- name: Enable GNOME3 Login Warning Banner
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-26970-4
+    - DISA-STIG-RHEL-07-010030
+    - NIST-800-171-3.1.9
+    - NIST-800-53-AC-8(a)
+    - NIST-800-53-AC-8(b)
+    - NIST-800-53-AC-8(c)
+    - dconf_gnome_banner_enabled
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - no_reboot_needed
+    - unknown_strategy
+  tasks:
+
+    - name: Gather the package facts
+      package_facts:
+        manager: auto
+
+    - name: Enable GNOME3 Login Warning Banner
+      ini_file:
+        dest: /etc/dconf/db/gdm.d/00-security-settings
+        section: org/gnome/login-screen
+        option: banner-message-enable
+        value: 'true'
+        create: true
+        no_extra_spaces: true
+      when: '"gdm" in ansible_facts.packages'
+
+    - name: Prevent user modification of GNOME banner-message-enabled
+      lineinfile:
+        path: /etc/dconf/db/gdm.d/locks/00-security-settings-lock
+        regexp: ^/org/gnome/login-screen/banner-message-enable$
+        line: /org/gnome/login-screen/banner-message-enable
+        create: true
+      when: '"gdm" in ansible_facts.packages'
+
+    - name: Dconf Update
+      command: dconf update
+      when: '"gdm" in ansible_facts.packages'

@@ -1,0 +1,64 @@
+# platform = Red Hat Enterprise Linux 7,Oracle Linux 7,multi_platform_sle
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Use Only FIPS 140-2 Validated Ciphers
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    sshd_approved_ciphers: chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com,aes128-cbc,aes192-cbc,aes256-cbc,blowfish-cbc,cast128-cbc,3des-cbc
+  tags:
+    - CCE-27295-5
+    - CJIS-5.5.6
+    - NIST-800-171-3.1.13
+    - NIST-800-171-3.13.11
+    - NIST-800-171-3.13.8
+    - NIST-800-53-AC-17(2)
+    - NIST-800-53-AC-17(a)
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-IA-5(1)(c)
+    - NIST-800-53-MA-4(6)
+    - NIST-800-53-SC-12(2)
+    - NIST-800-53-SC-12(3)
+    - NIST-800-53-SC-13
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+    - sshd_use_approved_ciphers
+  tasks:
+
+    - name: Use Only FIPS 140-2 Validated Ciphers
+      block:
+
+        - name: Check for duplicate values
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: false
+            regexp: (?i)^\s*Ciphers\s+
+            state: absent
+          check_mode: true
+          changed_when: false
+          register: dupes
+
+        - name: Deduplicate values from /etc/ssh/sshd_config
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: false
+            regexp: (?i)^\s*Ciphers\s+
+            state: absent
+          when: dupes.found is defined and dupes.found > 1
+
+        - name: Insert correct line to /etc/ssh/sshd_config
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: true
+            regexp: (?i)^\s*Ciphers\s+
+            line: Ciphers {{ sshd_approved_ciphers }}
+            state: present
+            insertbefore: ^[#\s]*Match
+            validate: /usr/sbin/sshd -t -f %s
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

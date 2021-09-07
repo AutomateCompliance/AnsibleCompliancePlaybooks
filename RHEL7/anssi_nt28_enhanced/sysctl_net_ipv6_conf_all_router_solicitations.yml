@@ -1,0 +1,28 @@
+# platform = multi_platform_all
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Configure Denying Router Solicitations on All IPv6 Interfaces
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    sysctl_net_ipv6_conf_all_router_solicitations_value: '0'
+  tags:
+    - CCE-84281-5
+    - disable_strategy
+    - low_complexity
+    - medium_disruption
+    - reboot_required
+    - sysctl_net_ipv6_conf_all_router_solicitations
+    - unknown_severity
+  tasks:
+
+    - name: Ensure sysctl net.ipv6.conf.all.router_solicitations is set
+      sysctl:
+        name: net.ipv6.conf.all.router_solicitations
+        value: '{{ sysctl_net_ipv6_conf_all_router_solicitations_value }}'
+        state: present
+        reload: true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

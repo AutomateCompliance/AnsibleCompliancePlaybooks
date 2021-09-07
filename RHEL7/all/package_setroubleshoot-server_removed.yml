@@ -1,0 +1,24 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = disable
+# complexity = low
+# disruption = low
+- name: Uninstall setroubleshoot-server Package
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83488-7
+    - disable_strategy
+    - low_complexity
+    - low_disruption
+    - low_severity
+    - no_reboot_needed
+    - package_setroubleshoot-server_removed
+  tasks:
+
+    - name: Ensure setroubleshoot-server is removed
+      package:
+        name: setroubleshoot-server
+        state: absent
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

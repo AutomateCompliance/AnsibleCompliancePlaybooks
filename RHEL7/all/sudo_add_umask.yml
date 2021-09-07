@@ -1,0 +1,35 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Ensure sudo umask is appropriate - sudo umask
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_sudo_umask: '0022'
+  tags:
+    - CCE-83859-9
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+    - sudo_add_umask
+  tasks:
+
+    - name: Ensure umask is enabled with the appropriate value in /etc/sudoers
+      lineinfile:
+        path: /etc/sudoers
+        regexp: ^[\s]*Defaults\s(.*)\bumask=[-]?\w+\b(.*)$
+        line: Defaults \1umask={{ var_sudo_umask }}\2
+        validate: /usr/sbin/visudo -cf %s
+        backrefs: true
+      register: edit_sudoers_umask_option
+
+    - name: Enable umask option with appropriate value in /etc/sudoers
+      lineinfile:
+        path: /etc/sudoers
+        line: Defaults umask={{ var_sudo_umask }}
+        validate: /usr/sbin/visudo -cf %s
+      when: edit_sudoers_umask_option is defined and not edit_sudoers_umask_option.changed

@@ -1,0 +1,55 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Ensure Logrotate Runs Periodically
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80195-1
+    - NIST-800-53-CM-6(a)
+    - PCI-DSS-Req-10.7
+    - configure_strategy
+    - ensure_logrotate_activated
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+  tasks:
+
+    - name: Configure daily log rotation in /etc/logrotate.conf
+      lineinfile:
+        create: true
+        dest: /etc/logrotate.conf
+        regexp: ^daily$
+        line: daily
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Make sure daily log rotation setting is not overriden in /etc/logrotate.conf
+      lineinfile:
+        create: false
+        dest: /etc/logrotate.conf
+        regexp: ^[\s]*(weekly|monthly|yearly)$
+        state: absent
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Configure cron.daily if not already
+      block:
+
+        - name: Add shebang
+          lineinfile:
+            path: /etc/cron.daily/logrotate
+            line: '#!/bin/sh'
+            insertbefore: BOF
+            create: true
+
+        - name: Add logrotate call
+          lineinfile:
+            path: /etc/cron.daily/logrotate
+            line: /usr/sbin/logrotate /etc/logrotate.conf
+            regexp: ^[\s]*/usr/sbin/logrotate[\s\S]*/etc/logrotate.conf$
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

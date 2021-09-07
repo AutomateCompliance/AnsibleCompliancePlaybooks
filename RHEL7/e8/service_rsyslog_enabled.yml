@@ -1,0 +1,37 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = enable
+# complexity = low
+# disruption = low
+- name: Enable rsyslog Service
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80188-6
+    - NIST-800-53-AU-4(1)
+    - NIST-800-53-CM-6(a)
+    - enable_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - service_rsyslog_enabled
+  tasks:
+
+    - name: Enable service rsyslog
+      block:
+
+        - name: Gather the package facts
+          package_facts:
+            manager: auto
+
+        - name: Enable service rsyslog
+          service:
+            name: rsyslog
+            enabled: 'yes'
+            state: started
+            masked: 'no'
+          when:
+            - '"rsyslog" in ansible_facts.packages'
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

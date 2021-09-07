@@ -1,0 +1,53 @@
+# platform = Red Hat Enterprise Linux 7,Red Hat Enterprise Linux 8,multi_platform_fedora,multi_platform_rhv,multi_platform_ol
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Force opensc To Use Defined Smart Card Driver
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_smartcard_drivers: cac
+  tags:
+    - CCE-81002-8
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-IA-2(1)
+    - NIST-800-53-IA-2(11)
+    - NIST-800-53-IA-2(2)
+    - NIST-800-53-IA-2(3)
+    - NIST-800-53-IA-2(4)
+    - NIST-800-53-IA-2(6)
+    - NIST-800-53-IA-2(7)
+    - PCI-DSS-Req-8.3
+    - configure_strategy
+    - force_opensc_card_drivers
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+  tasks:
+
+    - name: Check existence of opensc conf
+      stat:
+        path: /etc/opensc-{{ ansible_architecture }}.conf
+      register: opensc_conf_fcd
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Force smartcard driver block
+      block:
+
+        - name: Check if force_card_driver is defined
+          command: /usr/bin/opensc-tool -G app:default:force_card_driver
+          changed_when: false
+          register: force_card_driver
+
+        - name: Force opensc To Use Defined Smart Card Driver
+          command: |
+            /usr/bin/opensc-tool -S app:default:force_card_driver:{{ var_smartcard_drivers }}
+          when:
+            - force_card_driver.stdout != var_smartcard_drivers
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - opensc_conf_fcd.stat.exists

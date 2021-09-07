@@ -1,0 +1,62 @@
+# platform = Red Hat Enterprise Linux 7,Oracle Linux 7,multi_platform_sle
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Use Only FIPS 140-2 Validated MACs
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    sshd_approved_macs: umac-64-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha1-etm@openssh.com,umac-64@openssh.com,umac-128@openssh.com,hmac-sha2-256,hmac-sha2-512,hmac-sha1,hmac-sha1-etm@openssh.com
+  tags:
+    - CCE-27455-5
+    - NIST-800-171-3.1.13
+    - NIST-800-171-3.13.11
+    - NIST-800-171-3.13.8
+    - NIST-800-53-AC-17(2)
+    - NIST-800-53-AC-17(a)
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-MA-4(6)
+    - NIST-800-53-SC-12(2)
+    - NIST-800-53-SC-12(3)
+    - NIST-800-53-SC-13
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+    - sshd_use_approved_macs
+  tasks:
+
+    - name: Use Only FIPS 140-2 Validated MACs
+      block:
+
+        - name: Check for duplicate values
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: false
+            regexp: (?i)^\s*MACs\s+
+            state: absent
+          check_mode: true
+          changed_when: false
+          register: dupes
+
+        - name: Deduplicate values from /etc/ssh/sshd_config
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: false
+            regexp: (?i)^\s*MACs\s+
+            state: absent
+          when: dupes.found is defined and dupes.found > 1
+
+        - name: Insert correct line to /etc/ssh/sshd_config
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: true
+            regexp: (?i)^\s*MACs\s+
+            line: MACs {{ sshd_approved_macs }}
+            state: present
+            insertbefore: ^[#\s]*Match
+            validate: /usr/sbin/sshd -t -f %s
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

@@ -1,0 +1,28 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Verify permissions on System Login Banner
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83347-5
+    - configure_strategy
+    - file_permissions_etc_issue
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+  tasks:
+
+    - name: Test for existence /etc/issue
+      stat:
+        path: /etc/issue
+      register: file_exists
+
+    - name: Ensure permission 0644 on /etc/issue
+      file:
+        path: /etc/issue
+        mode: '0644'
+      when: file_exists.stat is defined and file_exists.stat.exists

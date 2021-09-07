@@ -1,0 +1,35 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Ensure sudo passwd_timeout is appropriate - sudo passwd_timeout
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_sudo_passwd_timeout: '5'
+  tags:
+    - CCE-83963-9
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+    - sudo_add_passwd_timeout
+  tasks:
+
+    - name: Ensure passwd_timeout is enabled with the appropriate value in /etc/sudoers
+      lineinfile:
+        path: /etc/sudoers
+        regexp: ^[\s]*Defaults\s(.*)\bpasswd_timeout=[-]?\w+\b(.*)$
+        line: Defaults \1passwd_timeout={{ var_sudo_passwd_timeout }}\2
+        validate: /usr/sbin/visudo -cf %s
+        backrefs: true
+      register: edit_sudoers_passwd_timeout_option
+
+    - name: Enable passwd_timeout option with appropriate value in /etc/sudoers
+      lineinfile:
+        path: /etc/sudoers
+        line: Defaults passwd_timeout={{ var_sudo_passwd_timeout }}
+        validate: /usr/sbin/visudo -cf %s
+      when: edit_sudoers_passwd_timeout_option is defined and not edit_sudoers_passwd_timeout_option.changed

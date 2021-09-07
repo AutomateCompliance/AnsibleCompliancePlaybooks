@@ -1,0 +1,30 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = unknown
+# complexity = low
+# disruption = medium
+- name: Deactivate Wireless Network Interfaces
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-27358-1
+    - DISA-STIG-RHEL-07-041010
+    - NIST-800-171-3.1.16
+    - NIST-800-53-AC-18(3)
+    - NIST-800-53-AC-18(a)
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-CM-7(a)
+    - NIST-800-53-CM-7(b)
+    - NIST-800-53-MP-7
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - no_reboot_needed
+    - unknown_strategy
+    - wireless_disable_interfaces
+  tasks:
+
+    - name: Deactivate Wireless Network Interfaces
+      command: nmcli radio wifi off
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

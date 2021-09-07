@@ -1,0 +1,34 @@
+# platform = Red Hat Virtualization 4,multi_platform_fedora,multi_platform_ol,multi_platform_rhel,multi_platform_sle
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Configure auditd Number of Logs Retained
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_auditd_num_logs: '5'
+  tags:
+    - CCE-27348-2
+    - CJIS-5.4.1.1
+    - NIST-800-171-3.3.1
+    - NIST-800-53-AU-11
+    - NIST-800-53-CM-6(a)
+    - PCI-DSS-Req-10.7
+    - auditd_data_retention_num_logs
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+  tasks:
+
+    - name: Configure auditd Number of Logs Retained
+      lineinfile:
+        dest: /etc/audit/auditd.conf
+        line: num_logs = {{ var_auditd_num_logs }}
+        regexp: ^\s*num_logs\s*=\s*.*$
+        state: present
+        create: true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

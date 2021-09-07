@@ -1,0 +1,25 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Ensure Privileged Escalated Commands Cannot Execute Other Commands - sudo
+    NOEXEC
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83740-1
+    - high_severity
+    - low_complexity
+    - low_disruption
+    - no_reboot_needed
+    - restrict_strategy
+    - sudo_add_noexec
+  tasks:
+
+    - name: Ensure noexec is enabled in /etc/sudoers
+      lineinfile:
+        path: /etc/sudoers
+        regexp: ^[\s]*Defaults.*\bnoexec\b.*$
+        line: Defaults noexec
+        validate: /usr/sbin/visudo -cf %s

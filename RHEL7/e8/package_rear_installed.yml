@@ -1,0 +1,22 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = enable
+# complexity = low
+# disruption = low
+- name: Install rear Package
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-82882-2
+    - enable_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - package_rear_installed
+  tasks:
+
+    - name: Ensure rear is installed
+      package:
+        name: rear
+        state: present

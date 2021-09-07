@@ -1,0 +1,27 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Verify User Who Owns /var/log Directory
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - configure_strategy
+    - file_owner_var_log
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+  tasks:
+
+    - name: Test for existence /var/log/
+      stat:
+        path: /var/log/
+      register: file_exists
+
+    - name: Ensure owner 0 on /var/log/
+      file:
+        path: /var/log/
+        owner: '0'
+      when: file_exists.stat is defined and file_exists.stat.exists

@@ -1,0 +1,31 @@
+# platform = multi_platform_rhel,multi_platform_fedora,multi_platform_ol,multi_platform_rhv,multi_platform_ubuntu,multi_platform_sle
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Disable SCTP Support
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-82044-9
+    - CJIS-5.10.1
+    - NIST-800-171-3.4.6
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-CM-7(a)
+    - NIST-800-53-CM-7(b)
+    - disable_strategy
+    - kernel_module_sctp_disabled
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - reboot_required
+  tasks:
+
+    - name: Ensure kernel module 'sctp' is disabled
+      lineinfile:
+        create: true
+        dest: /etc/modprobe.d/sctp.conf
+        regexp: sctp
+        line: install sctp /bin/true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

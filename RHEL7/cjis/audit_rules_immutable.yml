@@ -1,0 +1,53 @@
+# platform = multi_platform_all
+# reboot = true
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Make the auditd Configuration Immutable
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-27097-5
+    - CJIS-5.4.1.1
+    - NIST-800-171-3.3.1
+    - NIST-800-171-3.4.3
+    - NIST-800-53-AC-6(9)
+    - NIST-800-53-CM-6(a)
+    - PCI-DSS-Req-10.5.2
+    - audit_rules_immutable
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - reboot_required
+    - restrict_strategy
+  tasks:
+
+    - name: Collect all files from /etc/audit/rules.d with .rules extension
+      find:
+        paths: /etc/audit/rules.d/
+        patterns: '*.rules'
+      register: find_rules_d
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Remove the -e option from all Audit config files
+      lineinfile:
+        path: '{{ item }}'
+        regexp: ^\s*(?:-e)\s+.*$
+        state: absent
+      loop: '{{ find_rules_d.files | map(attribute=''path'') | list + [''/etc/audit/audit.rules'']
+        }}'
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Add Audit -e option into /etc/audit/rules.d/immutable.rules and /etc/audit/audit.rules
+      lineinfile:
+        path: '{{ item }}'
+        create: true
+        line: -e 2
+        mode: o-rwx
+      loop:
+        - /etc/audit/audit.rules
+        - /etc/audit/rules.d/immutable.rules
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

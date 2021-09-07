@@ -1,0 +1,25 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = disable
+# complexity = low
+# disruption = low
+- name: Uninstall bind Package
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80326-2
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-CM-7(a)
+    - NIST-800-53-CM-7(b)
+    - disable_strategy
+    - low_complexity
+    - low_disruption
+    - low_severity
+    - no_reboot_needed
+    - package_bind_removed
+  tasks:
+
+    - name: Ensure bind is removed
+      package:
+        name: bind
+        state: absent

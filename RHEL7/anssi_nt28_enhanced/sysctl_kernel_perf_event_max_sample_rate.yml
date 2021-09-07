@@ -1,0 +1,26 @@
+# platform = multi_platform_all
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Limit sampling frequency of the Perf system
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83367-3
+    - disable_strategy
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - reboot_required
+    - sysctl_kernel_perf_event_max_sample_rate
+  tasks:
+
+    - name: Ensure sysctl kernel.perf_event_max_sample_rate is set to 1
+      sysctl:
+        name: kernel.perf_event_max_sample_rate
+        value: '1'
+        state: present
+        reload: true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

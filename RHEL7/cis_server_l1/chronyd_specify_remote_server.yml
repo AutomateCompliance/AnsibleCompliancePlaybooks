@@ -1,0 +1,50 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: A remote time server for Chrony is configured
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_multiple_time_servers: 0.rhel.pool.ntp.org,1.rhel.pool.ntp.org,2.rhel.pool.ntp.org,3.rhel.pool.ntp.org
+  tags:
+    - CCE-83418-4
+    - NIST-800-53-AU-8(1)(a)
+    - NIST-800-53-CM-6(a)
+    - PCI-DSS-Req-10.4.3
+    - chronyd_specify_remote_server
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+  tasks:
+
+    - name: Gather the package facts
+      package_facts:
+        manager: auto
+
+    - name: Detect if chrony is already configured with pools or servers
+      find:
+        path: /etc
+        patterns: chrony.conf
+        contains: ^[\s]*(?:server|pool)[\s]+[\w]+
+      register: chrony_servers
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - '"chrony" in ansible_facts.packages'
+
+    - name: Configure remote time servers
+      lineinfile:
+        path: /etc/chrony.conf
+        line: server {{ item }}
+        state: present
+        create: true
+      loop: '{{ var_multiple_time_servers.split(",") }}'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - '"chrony" in ansible_facts.packages'
+        - chrony_servers.matched == 0

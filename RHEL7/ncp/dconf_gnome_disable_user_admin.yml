@@ -1,0 +1,105 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = unknown
+# complexity = low
+# disruption = medium
+- name: Disable User Administration in GNOME3
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80115-9
+    - NIST-800-171-3.1.5
+    - dconf_gnome_disable_user_admin
+    - high_severity
+    - low_complexity
+    - medium_disruption
+    - no_reboot_needed
+    - unknown_strategy
+  tasks:
+
+    - name: Gather the package facts
+      package_facts:
+        manager: auto
+
+    - name: Detect if user-administration-disabled can be found on /etc/dconf/db/local.d/
+      find:
+        path: /etc/dconf/db/local.d/
+        contains: ^\s*user-administration-disabled
+      register: dconf_gnome_disable_user_admin_config_files
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+
+    - name: Configure user-administration-disabled - default file
+      ini_file:
+        dest: /etc/dconf/db/local.d//00-security-settings
+        section: org/gnome/desktop/lockdown
+        option: user-administration-disabled
+        value: 'true'
+        create: true
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - dconf_gnome_disable_user_admin_config_files is defined and dconf_gnome_disable_user_admin_config_files.matched
+          == 0
+
+    - name: Configure user-administration-disabled - existing files
+      ini_file:
+        dest: '{{ item.path }}'
+        section: org/gnome/desktop/lockdown
+        option: user-administration-disabled
+        value: 'true'
+        create: true
+      with_items: '{{ dconf_gnome_disable_user_admin_config_files.files }}'
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - dconf_gnome_disable_user_admin_config_files is defined and dconf_gnome_disable_user_admin_config_files.matched
+          > 0
+
+    - name: Detect if lock for user-administration-disabled can be found on /etc/dconf/db/local.d/
+      find:
+        path: /etc/dconf/db/local.d/locks
+        contains: ^\s*user-administration-disabled
+      register: dconf_gnome_disable_user_admin_lock_files
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+
+    - name: Prevent user modification user-administration-disabled - default file
+      lineinfile:
+        path: /etc/dconf/db/local.d/locks/00-security-settings-lock
+        regexp: ^/org/gnome/desktop/lockdown/user-administration-disabled$
+        line: /org/gnome/desktop/lockdown/user-administration-disabled
+        create: true
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - dconf_gnome_disable_user_admin_lock_files is defined and dconf_gnome_disable_user_admin_lock_files.matched
+          == 0
+
+    - name: Prevent user modification user-administration-disabled - existing files
+      lineinfile:
+        path: '{{ item.path }}'
+        regexp: ^/org/gnome/desktop/lockdown/user-administration-disabled$
+        line: /org/gnome/desktop/lockdown/user-administration-disabled
+        create: true
+      with_items: '{{ dconf_gnome_disable_user_admin_lock_files.files }}'
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - dconf_gnome_disable_user_admin_lock_files is defined and dconf_gnome_disable_user_admin_lock_files.matched
+          > 0
+
+    - name: Dconf Update - user-administration-disabled
+      command: dconf update
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]

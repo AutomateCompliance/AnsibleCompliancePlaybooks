@@ -1,0 +1,26 @@
+# platform = multi_platform_all
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Disable loading and unloading of kernel modules
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83392-1
+    - disable_strategy
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - reboot_required
+    - sysctl_kernel_modules_disabled
+  tasks:
+
+    - name: Ensure sysctl kernel.modules_disabled is set to 1
+      sysctl:
+        name: kernel.modules_disabled
+        value: '1'
+        state: present
+        reload: true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

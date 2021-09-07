@@ -1,0 +1,32 @@
+# platform = multi_platform_sle,multi_platform_rhel
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Verify that All World-Writable Directories Have Sticky Bits Set
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80130-8
+    - NIST-800-53-AC-6(1)
+    - NIST-800-53-CM-6(a)
+    - dir_perms_world_writable_sticky_bits
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+  tasks:
+
+    - name: Get all world-writable directories with no sticky bits set
+      shell: |
+        set -o pipefail
+        df --local -P | awk '{if (NR!=1) print $6}' | xargs -I '{}' find '{}' -xdev -type d \( -perm -0002 -a ! -perm -1000 \) 2>/dev/null
+      register: dir_output
+
+    - name: ensure sticky bit is set
+      file:
+        path: '{{ item }}'
+        mode: a+t
+      with_items:
+        - '{{ dir_output.stdout_lines }}'

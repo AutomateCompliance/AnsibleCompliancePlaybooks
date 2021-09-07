@@ -1,0 +1,29 @@
+# platform = multi_platform_fedora,Red Hat OpenShift Container Platform 4,Oracle Linux 7,Oracle Linux 8,Red Hat Enterprise Linux 7,Red Hat Enterprise Linux 8,Red Hat Virtualization 4
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = medium
+- name: Ensure there are no legacy + NIS entries in /etc/group
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83388-9
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - no_legacy_plus_entries_etc_group
+    - no_reboot_needed
+    - restrict_strategy
+  tasks:
+
+    - name: Backup the old /etc/group file
+      copy:
+        src: /etc/group
+        dest: /etc/group-
+        remote_src: true
+
+    - name: Remove lines starting with + from /etc/group
+      lineinfile:
+        regexp: ^\+.*$
+        state: absent
+        path: /etc/group

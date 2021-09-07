@@ -1,0 +1,27 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = enable
+# complexity = low
+# disruption = low
+- name: Install sssd-ipa Package
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-82993-7
+    - enable_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - package_sssd-ipa_installed
+  tasks:
+
+    - name: Gather the package facts
+      package_facts:
+        manager: auto
+
+    - name: Ensure sssd-ipa is installed
+      package:
+        name: sssd-ipa
+        state: present
+      when: '"sssd-common" in ansible_facts.packages'

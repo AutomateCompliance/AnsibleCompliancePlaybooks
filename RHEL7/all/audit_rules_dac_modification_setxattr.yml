@@ -1,0 +1,302 @@
+# platform = multi_platform_rhel,multi_platform_fedora,multi_platform_ol,multi_platform_rhv,multi_platform_sle
+# reboot = true
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Record Events that Modify the System's Discretionary Access Controls - setxattr
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-27213-8
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030440
+    - NIST-800-171-3.1.7
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-CM-6(a)
+    - PCI-DSS-Req-10.5.5
+    - audit_rules_dac_modification_setxattr
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - reboot_required
+    - restrict_strategy
+  tasks:
+
+    - name: Set architecture for audit setxattr tasks
+      set_fact:
+        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Perform remediation of Audit rules for setxattr for x86 platform
+      block:
+
+        - name: Declare list of syscalls
+          set_fact:
+            syscalls:
+              - setxattr
+            syscall_grouping:
+              - fremovexattr
+              - lremovexattr
+              - removexattr
+              - fsetxattr
+              - lsetxattr
+              - setxattr
+
+        - name: Check existence of setxattr in /etc/audit/rules.d/
+          find:
+            paths: /etc/audit/rules.d
+            contains: -a always,exit -F arch=b32(( -S |,)\w+)*(( -S |,){{ item }})+((
+              -S |,)\w+)* -F auid>=1000 -F auid!=unset (-k\s+|-F\s+key=)\S+\s*$
+            patterns: '*.rules'
+          register: find_command
+          loop: '{{ (syscall_grouping + syscalls) | unique }}'
+
+        - name: Reset syscalls found per file
+          set_fact:
+            syscalls_per_file: {}
+            found_paths_dict: {}
+
+        - name: Declare syscalls found per file
+          set_fact: syscalls_per_file="{{ syscalls_per_file | combine( {item.files[0].path
+            :[item.item] + syscalls_per_file.get(item.files[0].path, []) } ) }}"
+          loop: '{{ find_command.results | selectattr(''matched'') | list }}'
+
+        - name: Declare files where syscalls were found
+          set_fact: found_paths="{{ find_command.results | map(attribute='files')
+            | flatten | map(attribute='path') | list }}"
+
+        - name: Count occurrences of syscalls in paths
+          set_fact: found_paths_dict="{{ found_paths_dict | combine({ item:1+found_paths_dict.get(item,
+            0) }) }}"
+          loop: '{{ find_command.results | map(attribute=''files'') | flatten | map(attribute=''path'')
+            | list }}'
+
+        - name: Get path with most syscalls
+          set_fact: audit_file="{{ (found_paths_dict | dict2items() | sort(attribute='value')
+            | last).key }}"
+          when: found_paths | length >= 1
+
+        - name: No file with syscall found, set path to /etc/audit/rules.d/perm_mod.rules
+          set_fact: audit_file="/etc/audit/rules.d/perm_mod.rules"
+          when: found_paths | length == 0
+
+        - name: Declare found syscalls
+          set_fact: syscalls_found="{{ find_command.results | selectattr('matched')
+            | map(attribute='item') | list }}"
+
+        - name: Declare missing syscalls
+          set_fact: missing_syscalls="{{ syscalls | difference(syscalls_found) }}"
+
+        - name: Replace the audit rule in {{ audit_file }}
+          lineinfile:
+            path: '{{ audit_file }}'
+            regexp: (-a always,exit -F arch=b32)(?=.*(?:(?:-S |,)(?:{{ syscalls_per_file[audit_file]
+              | join("|") }}))\b)((?:( -S |,)\w+)+)( -F auid>=1000 -F auid!=unset
+              (?:-k |-F key=)\w+)
+            line: \1\2\3{{ missing_syscalls | join("\3") }}\4
+            backrefs: true
+            state: present
+          when: syscalls_found | length > 0 and missing_syscalls | length > 0
+
+        - name: Add the audit rule to {{ audit_file }}
+          lineinfile:
+            path: '{{ audit_file }}'
+            line: -a always,exit -F arch=b32 -S {{ syscalls | join(',') }} -F auid>=1000
+              -F auid!=unset -F key=perm_mod
+            create: true
+            mode: o-rwx
+            state: present
+          when: syscalls_found | length == 0
+
+        - name: Declare list of syscalls
+          set_fact:
+            syscalls:
+              - setxattr
+            syscall_grouping:
+              - fremovexattr
+              - lremovexattr
+              - removexattr
+              - fsetxattr
+              - lsetxattr
+              - setxattr
+
+        - name: Check existence of setxattr in /etc/audit/audit.rules
+          find:
+            paths: /etc/audit
+            contains: -a always,exit -F arch=b32(( -S |,)\w+)*(( -S |,){{ item }})+((
+              -S |,)\w+)* -F auid>=1000 -F auid!=unset (-k\s+|-F\s+key=)\S+\s*$
+            patterns: audit.rules
+          register: find_command
+          loop: '{{ (syscall_grouping + syscalls) | unique }}'
+
+        - name: Set path to /etc/audit/audit.rules
+          set_fact: audit_file="/etc/audit/audit.rules"
+
+        - name: Declare found syscalls
+          set_fact: syscalls_found="{{ find_command.results | selectattr('matched')
+            | map(attribute='item') | list }}"
+
+        - name: Declare missing syscalls
+          set_fact: missing_syscalls="{{ syscalls | difference(syscalls_found) }}"
+
+        - name: Replace the audit rule in {{ audit_file }}
+          lineinfile:
+            path: '{{ audit_file }}'
+            regexp: (-a always,exit -F arch=b32)(?=.*(?:(?:-S |,)(?:{{ syscalls_found
+              | join("|") }}))\b)((?:( -S |,)\w+)+)( -F auid>=1000 -F auid!=unset
+              (?:-k |-F key=)\w+)
+            line: \1\2\3{{ missing_syscalls | join("\3") }}\4
+            backrefs: true
+            state: present
+          when: syscalls_found | length > 0 and missing_syscalls | length > 0
+
+        - name: Add the audit rule to {{ audit_file }}
+          lineinfile:
+            path: '{{ audit_file }}'
+            line: -a always,exit -F arch=b32 -S {{ syscalls | join(',') }} -F auid>=1000
+              -F auid!=unset -F key=perm_mod
+            create: true
+            mode: o-rwx
+            state: present
+          when: syscalls_found | length == 0
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Perform remediation of Audit rules for setxattr for x86_64 platform
+      block:
+
+        - name: Declare list of syscalls
+          set_fact:
+            syscalls:
+              - setxattr
+            syscall_grouping:
+              - fremovexattr
+              - lremovexattr
+              - removexattr
+              - fsetxattr
+              - lsetxattr
+              - setxattr
+
+        - name: Check existence of setxattr in /etc/audit/rules.d/
+          find:
+            paths: /etc/audit/rules.d
+            contains: -a always,exit -F arch=b64(( -S |,)\w+)*(( -S |,){{ item }})+((
+              -S |,)\w+)* -F auid>=1000 -F auid!=unset (-k\s+|-F\s+key=)\S+\s*$
+            patterns: '*.rules'
+          register: find_command
+          loop: '{{ (syscall_grouping + syscalls) | unique }}'
+
+        - name: Reset syscalls found per file
+          set_fact:
+            syscalls_per_file: {}
+            found_paths_dict: {}
+
+        - name: Declare syscalls found per file
+          set_fact: syscalls_per_file="{{ syscalls_per_file | combine( {item.files[0].path
+            :[item.item] + syscalls_per_file.get(item.files[0].path, []) } ) }}"
+          loop: '{{ find_command.results | selectattr(''matched'') | list }}'
+
+        - name: Declare files where syscalls were found
+          set_fact: found_paths="{{ find_command.results | map(attribute='files')
+            | flatten | map(attribute='path') | list }}"
+
+        - name: Count occurrences of syscalls in paths
+          set_fact: found_paths_dict="{{ found_paths_dict | combine({ item:1+found_paths_dict.get(item,
+            0) }) }}"
+          loop: '{{ find_command.results | map(attribute=''files'') | flatten | map(attribute=''path'')
+            | list }}'
+
+        - name: Get path with most syscalls
+          set_fact: audit_file="{{ (found_paths_dict | dict2items() | sort(attribute='value')
+            | last).key }}"
+          when: found_paths | length >= 1
+
+        - name: No file with syscall found, set path to /etc/audit/rules.d/perm_mod.rules
+          set_fact: audit_file="/etc/audit/rules.d/perm_mod.rules"
+          when: found_paths | length == 0
+
+        - name: Declare found syscalls
+          set_fact: syscalls_found="{{ find_command.results | selectattr('matched')
+            | map(attribute='item') | list }}"
+
+        - name: Declare missing syscalls
+          set_fact: missing_syscalls="{{ syscalls | difference(syscalls_found) }}"
+
+        - name: Replace the audit rule in {{ audit_file }}
+          lineinfile:
+            path: '{{ audit_file }}'
+            regexp: (-a always,exit -F arch=b64)(?=.*(?:(?:-S |,)(?:{{ syscalls_per_file[audit_file]
+              | join("|") }}))\b)((?:( -S |,)\w+)+)( -F auid>=1000 -F auid!=unset
+              (?:-k |-F key=)\w+)
+            line: \1\2\3{{ missing_syscalls | join("\3") }}\4
+            backrefs: true
+            state: present
+          when: syscalls_found | length > 0 and missing_syscalls | length > 0
+
+        - name: Add the audit rule to {{ audit_file }}
+          lineinfile:
+            path: '{{ audit_file }}'
+            line: -a always,exit -F arch=b64 -S {{ syscalls | join(',') }} -F auid>=1000
+              -F auid!=unset -F key=perm_mod
+            create: true
+            mode: o-rwx
+            state: present
+          when: syscalls_found | length == 0
+
+        - name: Declare list of syscalls
+          set_fact:
+            syscalls:
+              - setxattr
+            syscall_grouping:
+              - fremovexattr
+              - lremovexattr
+              - removexattr
+              - fsetxattr
+              - lsetxattr
+              - setxattr
+
+        - name: Check existence of setxattr in /etc/audit/audit.rules
+          find:
+            paths: /etc/audit
+            contains: -a always,exit -F arch=b64(( -S |,)\w+)*(( -S |,){{ item }})+((
+              -S |,)\w+)* -F auid>=1000 -F auid!=unset (-k\s+|-F\s+key=)\S+\s*$
+            patterns: audit.rules
+          register: find_command
+          loop: '{{ (syscall_grouping + syscalls) | unique }}'
+
+        - name: Set path to /etc/audit/audit.rules
+          set_fact: audit_file="/etc/audit/audit.rules"
+
+        - name: Declare found syscalls
+          set_fact: syscalls_found="{{ find_command.results | selectattr('matched')
+            | map(attribute='item') | list }}"
+
+        - name: Declare missing syscalls
+          set_fact: missing_syscalls="{{ syscalls | difference(syscalls_found) }}"
+
+        - name: Replace the audit rule in {{ audit_file }}
+          lineinfile:
+            path: '{{ audit_file }}'
+            regexp: (-a always,exit -F arch=b64)(?=.*(?:(?:-S |,)(?:{{ syscalls_found
+              | join("|") }}))\b)((?:( -S |,)\w+)+)( -F auid>=1000 -F auid!=unset
+              (?:-k |-F key=)\w+)
+            line: \1\2\3{{ missing_syscalls | join("\3") }}\4
+            backrefs: true
+            state: present
+          when: syscalls_found | length > 0 and missing_syscalls | length > 0
+
+        - name: Add the audit rule to {{ audit_file }}
+          lineinfile:
+            path: '{{ audit_file }}'
+            line: -a always,exit -F arch=b64 -S {{ syscalls | join(',') }} -F auid>=1000
+              -F auid!=unset -F key=perm_mod
+            create: true
+            mode: o-rwx
+            state: present
+          when: syscalls_found | length == 0
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - audit_arch == "b64"

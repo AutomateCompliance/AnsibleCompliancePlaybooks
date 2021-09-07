@@ -1,0 +1,57 @@
+# platform = multi_platform_rhel,multi_platform_fedora,multi_platform_ol
+# reboot = false
+# strategy = unknown
+# complexity = low
+# disruption = medium
+- name: Disable the GNOME3 Login Restart and Shutdown Buttons
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80107-6
+    - NIST-800-171-3.1.2
+    - NIST-800-53-AC-6(1)
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-CM-7(b)
+    - dconf_gnome_disable_restart_shutdown
+    - high_severity
+    - low_complexity
+    - medium_disruption
+    - no_reboot_needed
+    - unknown_strategy
+  tasks:
+
+    - name: Gather the package facts
+      package_facts:
+        manager: auto
+
+    - name: Disable the GNOME3 Login Restart and Shutdown Buttons
+      ini_file:
+        dest: /etc/dconf/db/gdm.d/00-security-settings
+        section: org/gnome/login-screen
+        option: disable-restart-buttons
+        value: 'true'
+        create: true
+        no_extra_spaces: true
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+
+    - name: Prevent user modification of GNOME disablement of Login Restart and Shutdown
+        Buttons
+      lineinfile:
+        path: /etc/dconf/db/gdm.d/locks/00-security-settings-lock
+        regexp: ^/org/gnome/login-screen/disable-restart-buttons
+        line: /org/gnome/login-screen/disable-restart-buttons
+        create: true
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+
+    - name: Dconf Update
+      command: dconf update
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]

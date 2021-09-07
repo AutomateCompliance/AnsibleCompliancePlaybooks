@@ -1,0 +1,33 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Verify Permissions on /etc/hosts.deny
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-84035-5
+    - configure_strategy
+    - file_permissions_etc_hosts_deny
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+  tasks:
+
+    - name: Test for existence /etc/hosts.deny
+      stat:
+        path: /etc/hosts.deny
+      register: file_exists
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Ensure permission 0644 on /etc/hosts.deny
+      file:
+        path: /etc/hosts.deny
+        mode: '0644'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - file_exists.stat is defined and file_exists.stat.exists

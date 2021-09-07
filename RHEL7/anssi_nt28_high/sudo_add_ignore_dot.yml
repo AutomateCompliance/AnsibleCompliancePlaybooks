@@ -1,0 +1,24 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Ensure sudo Ignores Commands In Current Dir - sudo ignore_dot
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83809-4
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+    - sudo_add_ignore_dot
+  tasks:
+
+    - name: Ensure ignore_dot is enabled in /etc/sudoers
+      lineinfile:
+        path: /etc/sudoers
+        regexp: ^[\s]*Defaults.*\bignore_dot\b.*$
+        line: Defaults ignore_dot
+        validate: /usr/sbin/visudo -cf %s

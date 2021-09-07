@@ -1,0 +1,30 @@
+# platform = multi_platform_rhel,multi_platform_fedora,multi_platform_ol,multi_platform_rhv,multi_platform_ubuntu,multi_platform_sle
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Disable Mounting of squashfs
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80142-3
+    - NIST-800-171-3.4.6
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-CM-7(a)
+    - NIST-800-53-CM-7(b)
+    - disable_strategy
+    - kernel_module_squashfs_disabled
+    - low_complexity
+    - low_severity
+    - medium_disruption
+    - reboot_required
+  tasks:
+
+    - name: Ensure kernel module 'squashfs' is disabled
+      lineinfile:
+        create: true
+        dest: /etc/modprobe.d/squashfs.conf
+        regexp: squashfs
+        line: install squashfs /bin/true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

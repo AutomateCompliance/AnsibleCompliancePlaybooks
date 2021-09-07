@@ -1,0 +1,26 @@
+# platform = multi_platform_all
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Prevent applications from mapping low portion of virtual memory
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83358-2
+    - disable_strategy
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - reboot_required
+    - sysctl_vm_mmap_min_addr
+  tasks:
+
+    - name: Ensure sysctl vm.mmap_min_addr is set to 65536
+      sysctl:
+        name: vm.mmap_min_addr
+        value: '65536'
+        state: present
+        reload: true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

@@ -1,0 +1,49 @@
+# platform = Oracle Linux 7,Oracle Linux 8,Red Hat Enterprise Linux 7,Red Hat Enterprise Linux 8,Red Hat Virtualization 4,WRLinux 1019
+# reboot = false
+# complexity = low
+# strategy = configure
+# disruption = low
+- name: Ensure tftp Daemon Uses Secure Mode
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_tftpd_secure_directory: /var/lib/tftpboot
+  tags:
+    - CCE-80214-0
+    - DISA-STIG-RHEL-07-040720
+    - NIST-800-53-AC-6
+    - NIST-800-53-CM-6(b)
+    - NIST-800-53-CM-7(a)
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - tftpd_uses_secure_mode
+  tasks:
+
+    - name: Find out if the file exists and contains the line configuring server arguments
+      find:
+        path: /etc/xinetd.d
+        patterns: tftp
+        contains: ^[\s]+server_args.*$
+      register: tftpd_secure_config_line
+
+    - name: Ensure that TFTP server is configured to start with secure directory
+      lineinfile:
+        path: /etc/xinetd.d/tftp
+        regexp: ^[\s]*(server_args[\s]+=[\s]+.*?)(-s[\s]+[/\.\w]+)*(.*)$
+        line: \1 -s {{ var_tftpd_secure_directory }} \3
+        state: present
+        backrefs: true
+      when: tftpd_secure_config_line is defined and tftpd_secure_config_line.matched
+        > 0
+
+    - name: Insert correct config line to start TFTP server with secure directory
+      lineinfile:
+        path: /etc/xinetd.d/tftp
+        line: server_args = -s {{ var_tftpd_secure_directory }}
+        state: present
+        create: true
+      when: tftpd_secure_config_line is defined and tftpd_secure_config_line.matched
+        == 0

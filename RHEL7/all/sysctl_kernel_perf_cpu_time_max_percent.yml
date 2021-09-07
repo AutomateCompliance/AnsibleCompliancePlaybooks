@@ -1,0 +1,26 @@
+# platform = multi_platform_all
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Limit CPU consumption of the Perf system
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83369-9
+    - disable_strategy
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - reboot_required
+    - sysctl_kernel_perf_cpu_time_max_percent
+  tasks:
+
+    - name: Ensure sysctl kernel.perf_cpu_time_max_percent is set to 1
+      sysctl:
+        name: kernel.perf_cpu_time_max_percent
+        value: '1'
+        state: present
+        reload: true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

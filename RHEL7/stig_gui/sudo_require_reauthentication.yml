@@ -1,0 +1,38 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: The operating system must require Re-Authentication when using the sudo command.
+    Ensure sudo timestamp_timeout is appropriate - sudo timestamp_timeout
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_sudo_timestamp_timeout: '5'
+  tags:
+    - CCE-85963-7
+    - DISA-STIG-RHEL-07-010343
+    - NIST-800-53-IA-11
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+    - sudo_require_reauthentication
+  tasks:
+
+    - name: Ensure timestamp_timeout is enabled with the appropriate value in /etc/sudoers
+      lineinfile:
+        path: /etc/sudoers
+        regexp: ^[\s]*Defaults\s(.*)\btimestamp_timeout=[-]?\w+\b(.*)$
+        line: Defaults \1timestamp_timeout={{ var_sudo_timestamp_timeout }}\2
+        validate: /usr/sbin/visudo -cf %s
+        backrefs: true
+      register: edit_sudoers_timestamp_timeout_option
+
+    - name: Enable timestamp_timeout option with appropriate value in /etc/sudoers
+      lineinfile:
+        path: /etc/sudoers
+        line: Defaults timestamp_timeout={{ var_sudo_timestamp_timeout }}
+        validate: /usr/sbin/visudo -cf %s
+      when: edit_sudoers_timestamp_timeout_option is defined and not edit_sudoers_timestamp_timeout_option.changed

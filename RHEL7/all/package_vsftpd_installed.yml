@@ -1,0 +1,23 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = enable
+# complexity = low
+# disruption = low
+- name: Install vsftpd Package
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80246-2
+    - NIST-800-53-CM-6(a)
+    - enable_strategy
+    - low_complexity
+    - low_disruption
+    - low_severity
+    - no_reboot_needed
+    - package_vsftpd_installed
+  tasks:
+
+    - name: Ensure vsftpd is installed
+      package:
+        name: vsftpd
+        state: present

@@ -1,0 +1,24 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Ensure Only Users Logged In To Real tty Can Execute Sudo - sudo use_pty
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83797-1
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+    - sudo_add_use_pty
+  tasks:
+
+    - name: Ensure use_pty is enabled in /etc/sudoers
+      lineinfile:
+        path: /etc/sudoers
+        regexp: ^[\s]*Defaults.*\buse_pty\b.*$
+        line: Defaults use_pty
+        validate: /usr/sbin/visudo -cf %s

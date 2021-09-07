@@ -1,0 +1,25 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = disable
+# complexity = low
+# disruption = low
+- name: Uninstall openldap-servers Package
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80293-4
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-CM-7(a)
+    - NIST-800-53-CM-7(b)
+    - disable_strategy
+    - low_complexity
+    - low_disruption
+    - low_severity
+    - no_reboot_needed
+    - package_openldap-servers_removed
+  tasks:
+
+    - name: Ensure openldap-servers is removed
+      package:
+        name: openldap-servers
+        state: absent

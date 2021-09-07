@@ -1,0 +1,28 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Verify permissions on Message of the Day Banner
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83337-6
+    - configure_strategy
+    - file_permissions_etc_motd
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+  tasks:
+
+    - name: Test for existence /etc/motd
+      stat:
+        path: /etc/motd
+      register: file_exists
+
+    - name: Ensure permission 0644 on /etc/motd
+      file:
+        path: /etc/motd
+        mode: '0644'
+      when: file_exists.stat is defined and file_exists.stat.exists

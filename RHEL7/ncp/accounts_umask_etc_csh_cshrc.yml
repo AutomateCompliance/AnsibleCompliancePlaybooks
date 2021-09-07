@@ -1,0 +1,27 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Ensure the Default C Shell Umask is Set Correctly
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_accounts_user_umask: '077'
+  tags:
+    - CCE-80203-3
+    - NIST-800-53-AC-6(1)
+    - NIST-800-53-CM-6(a)
+    - accounts_umask_etc_csh_cshrc
+    - low_complexity
+    - low_disruption
+    - no_reboot_needed
+    - restrict_strategy
+    - unknown_severity
+  tasks:
+
+    - name: Set user umask in /etc/csh.cshrc
+      replace:
+        path: /etc/csh.cshrc
+        regexp: umask.*
+        replace: umask {{ var_accounts_user_umask }}

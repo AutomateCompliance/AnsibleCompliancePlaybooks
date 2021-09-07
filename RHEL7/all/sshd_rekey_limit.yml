@@ -1,0 +1,52 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Force frequent session key renegotiation
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_rekey_limit_size: 512M
+    var_rekey_limit_time: 1h
+  tags:
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - sshd_rekey_limit
+  tasks:
+
+    - name: Force frequent session key renegotiation
+      block:
+
+        - name: Check for duplicate values
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: false
+            regexp: (?i)^\s*RekeyLimit\s+
+            state: absent
+          check_mode: true
+          changed_when: false
+          register: dupes
+
+        - name: Deduplicate values from /etc/ssh/sshd_config
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: false
+            regexp: (?i)^\s*RekeyLimit\s+
+            state: absent
+          when: dupes.found is defined and dupes.found > 1
+
+        - name: Insert correct line to /etc/ssh/sshd_config
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: true
+            regexp: (?i)^\s*RekeyLimit\s+
+            line: RekeyLimit {{ var_rekey_limit_size }} {{ var_rekey_limit_time }}
+            state: present
+            insertbefore: ^[#\s]*Match
+            validate: /usr/sbin/sshd -t -f %s
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

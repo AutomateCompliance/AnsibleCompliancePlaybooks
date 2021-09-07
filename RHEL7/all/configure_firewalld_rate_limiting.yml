@@ -1,0 +1,29 @@
+# platform = Red Hat Enterprise Linux 7,Red Hat Enterprise Linux 8,multi_platform_fedora,multi_platform_ol,multi_platform_rhv,multi_platform_ol
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Configure firewalld To Rate Limit Connections
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80542-4
+    - DISA-STIG-RHEL-07-040510
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-SC-5
+    - NIST-800-53-SC-5(1)
+    - NIST-800-53-SC-5(2)
+    - NIST-800-53-SC-5(3)(a)
+    - configure_firewalld_rate_limiting
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+  tasks:
+
+    - name: Configure rate limiting direct rule for firewalld
+      command: firewall-cmd --permanent --direct --add-rule ipv4 filter INPUT_direct
+        0 -p tcp -m limit --limit 25/minute --limit-burst 100  -j INPUT_ZONES
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

@@ -1,0 +1,56 @@
+# platform = multi_platform_rhel,multi_platform_fedora,multi_platform_ol
+# reboot = false
+# strategy = unknown
+# complexity = low
+# disruption = medium
+- name: Require Encryption for Remote Access in GNOME3
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80121-7
+    - NIST-800-171-3.1.13
+    - NIST-800-53-AC-17(2)
+    - NIST-800-53-AC-17(a)
+    - NIST-800-53-CM-6(a)
+    - dconf_gnome_remote_access_encryption
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - no_reboot_needed
+    - unknown_strategy
+  tasks:
+
+    - name: Gather the package facts
+      package_facts:
+        manager: auto
+
+    - name: Require Encryption for Remote Access in GNOME3
+      ini_file:
+        dest: /etc/dconf/db/local.d/00-security-settings
+        section: org/gnome/Vino
+        option: require-encryption
+        value: 'true'
+        create: true
+        no_extra_spaces: true
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+
+    - name: Prevent user modification of GNOME3 Encryption for Remote Access
+      lineinfile:
+        path: /etc/dconf/db/local.d/locks/00-security-settings-lock
+        regexp: ^/org/gnome/Vino/require-encryption$
+        line: /org/gnome/Vino/require-encryption
+        create: true
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+
+    - name: Dconf Update
+      command: dconf update
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]

@@ -1,0 +1,58 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = disable
+# complexity = low
+# disruption = low
+- name: Disable Avahi Server Software
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80338-7
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-CM-7(a)
+    - NIST-800-53-CM-7(b)
+    - disable_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - service_avahi-daemon_disabled
+  tasks:
+
+    - name: Disable service avahi-daemon
+      block:
+
+        - name: Gather the service facts
+          service_facts: null
+
+        - name: Disable service avahi-daemon
+          systemd:
+            name: avahi-daemon.service
+            enabled: 'no'
+            state: stopped
+            masked: 'yes'
+          when: '"avahi-daemon.service" in ansible_facts.services'
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Unit Socket Exists - avahi-daemon.socket
+      command: systemctl list-unit-files avahi-daemon.socket
+      args:
+        warn: false
+      register: socket_file_exists
+      changed_when: false
+      ignore_errors: true
+      check_mode: false
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Disable socket avahi-daemon
+      systemd:
+        name: avahi-daemon.socket
+        enabled: 'no'
+        state: stopped
+        masked: 'yes'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - '"avahi-daemon.socket" in socket_file_exists.stdout_lines[1]'

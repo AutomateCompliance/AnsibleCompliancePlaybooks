@@ -1,0 +1,43 @@
+# platform = Red Hat Enterprise Linux 7,Red Hat Enterprise Linux 8,Red Hat Virtualization 4,multi_platform_wrlinux,multi_platform_ol,multi_platform_sle
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Configure Notification of Post-AIDE Scan Details
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_aide_scan_notification_email: root@localhost
+  tags:
+    - CCE-80374-2
+    - DISA-STIG-RHEL-07-020040
+    - NIST-800-53-CM-3(5)
+    - NIST-800-53-CM-6(a)
+    - aide_scan_notification
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+  tasks:
+
+    - name: Ensure AIDE is installed
+      package:
+        name: '{{ item }}'
+        state: present
+      with_items:
+        - aide
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Configure Notification of Post-AIDE Scan Details
+      cron:
+        name: run AIDE check
+        minute: 5
+        hour: 4
+        weekday: 0
+        user: root
+        job: /usr/sbin/aide  --check | /bin/mail -s "$(hostname) - AIDE Integrity
+          Check" {{ var_aide_scan_notification_email }}
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

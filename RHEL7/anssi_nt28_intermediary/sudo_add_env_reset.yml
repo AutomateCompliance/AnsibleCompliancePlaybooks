@@ -1,0 +1,24 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Ensure sudo Runs In A Minimal Environment - sudo env_reset
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83819-3
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+    - sudo_add_env_reset
+  tasks:
+
+    - name: Ensure env_reset is enabled in /etc/sudoers
+      lineinfile:
+        path: /etc/sudoers
+        regexp: ^[\s]*Defaults.*\benv_reset\b.*$
+        line: Defaults env_reset
+        validate: /usr/sbin/visudo -cf %s

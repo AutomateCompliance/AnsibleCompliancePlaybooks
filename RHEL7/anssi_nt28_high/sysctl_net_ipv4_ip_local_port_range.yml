@@ -1,0 +1,26 @@
+# platform = multi_platform_all
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Set Kernel Parameter to Increase Local Port Range
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-84276-5
+    - disable_strategy
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - reboot_required
+    - sysctl_net_ipv4_ip_local_port_range
+  tasks:
+
+    - name: Ensure sysctl net.ipv4.ip_local_port_range is set to 32768 65535
+      sysctl:
+        name: net.ipv4.ip_local_port_range
+        value: 32768 65535
+        state: present
+        reload: true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

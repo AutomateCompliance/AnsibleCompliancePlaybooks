@@ -1,0 +1,26 @@
+# platform = multi_platform_all
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Disallow magic SysRq key
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83353-3
+    - disable_strategy
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - reboot_required
+    - sysctl_kernel_sysrq
+  tasks:
+
+    - name: Ensure sysctl kernel.sysrq is set to 0
+      sysctl:
+        name: kernel.sysrq
+        value: '0'
+        state: present
+        reload: true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

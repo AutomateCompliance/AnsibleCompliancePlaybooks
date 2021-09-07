@@ -1,0 +1,36 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Verify Group Who Owns SSH Server config file
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-82902-8
+    - NIST-800-53-AC-17(a)
+    - NIST-800-53-AC-6(1)
+    - NIST-800-53-CM-6(a)
+    - configure_strategy
+    - file_groupowner_sshd_config
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+  tasks:
+
+    - name: Test for existence /etc/ssh/sshd_config
+      stat:
+        path: /etc/ssh/sshd_config
+      register: file_exists
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Ensure group owner 0 on /etc/ssh/sshd_config
+      file:
+        path: /etc/ssh/sshd_config
+        group: '0'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - file_exists.stat is defined and file_exists.stat.exists

@@ -1,0 +1,71 @@
+# platform = Red Hat Virtualization 4,multi_platform_fedora,multi_platform_ol,multi_platform_rhel,multi_platform_sle
+# reboot = false
+# strategy = unknown
+# complexity = low
+# disruption = medium
+- name: Configure SSSD's Memory Cache to Expire
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_sssd_memcache_timeout: '300'
+  tags:
+    - CCE-80364-3
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-IA-5(13)
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - no_reboot_needed
+    - sssd_memcache_timeout
+    - unknown_strategy
+  tasks:
+
+    - name: Gather the package facts
+      package_facts:
+        manager: auto
+
+    - name: Test for domain group
+      command: grep '\s*\[domain\/[^]]*]' /etc/sssd/sssd.conf
+      register: test_grep_domain
+      ignore_errors: true
+      changed_when: false
+      check_mode: false
+      when:
+        - '"sssd-common" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+
+    - name: Add default domain group (if no domain there)
+      ini_file:
+        path: /etc/sssd/sssd.conf
+        section: '{{ item.section }}'
+        option: '{{ item.option }}'
+        value: '{{ item.value }}'
+        create: true
+        mode: 384
+      with_items:
+        - section: sssd
+          option: domains
+          value: default
+        - section: domain/default
+          option: id_provider
+          value: files
+      when:
+        - '"sssd-common" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - test_grep_domain.stdout is defined
+        - test_grep_domain.stdout | length < 1
+
+    - name: Configure SSSD's Memory Cache to Expire
+      ini_file:
+        dest: /etc/sssd/sssd.conf
+        section: nss
+        option: memcache_timeout
+        value: '{{ var_sssd_memcache_timeout }}'
+        create: true
+        mode: 384
+      when:
+        - '"sssd-common" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]

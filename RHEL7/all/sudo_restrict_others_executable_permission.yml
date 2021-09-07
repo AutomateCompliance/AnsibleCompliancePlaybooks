@@ -1,0 +1,29 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Ensure only owner and members of group owner of /usr/bin/sudo can execute
+    it
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83571-0
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - sudo_restrict_others_executable_permission
+  tasks:
+
+    - name: Test for existence /usr/bin/sudo
+      stat:
+        path: /usr/bin/sudo
+      register: file_exists
+
+    - name: Ensure permission 4110 on /usr/bin/sudo
+      file:
+        path: /usr/bin/sudo
+        mode: '4110'
+      when: file_exists.stat is defined and file_exists.stat.exists

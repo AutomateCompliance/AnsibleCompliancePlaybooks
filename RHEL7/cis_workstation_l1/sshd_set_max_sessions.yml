@@ -1,0 +1,52 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Set SSH MaxSessions limit
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_sshd_max_sessions: '10'
+  tags:
+    - CCE-85856-3
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - sshd_set_max_sessions
+  tasks:
+
+    - name: Set SSH MaxSessions limit
+      block:
+
+        - name: Check for duplicate values
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: false
+            regexp: (?i)^\s*MaxSessions\s+
+            state: absent
+          check_mode: true
+          changed_when: false
+          register: dupes
+
+        - name: Deduplicate values from /etc/ssh/sshd_config
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: false
+            regexp: (?i)^\s*MaxSessions\s+
+            state: absent
+          when: dupes.found is defined and dupes.found > 1
+
+        - name: Insert correct line to /etc/ssh/sshd_config
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: true
+            regexp: (?i)^\s*MaxSessions\s+
+            line: MaxSessions {{ var_sshd_max_sessions }}
+            state: present
+            insertbefore: ^[#\s]*Match
+            validate: /usr/sbin/sshd -t -f %s
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

@@ -1,0 +1,55 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Enable Use of Strict Mode Checking
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80222-3
+    - DISA-STIG-RHEL-07-040450
+    - NIST-800-171-3.1.12
+    - NIST-800-53-AC-17(a)
+    - NIST-800-53-AC-6
+    - NIST-800-53-CM-6(a)
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+    - sshd_enable_strictmodes
+  tasks:
+
+    - name: Enable Use of Strict Mode Checking
+      block:
+
+        - name: Check for duplicate values
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: false
+            regexp: (?i)^\s*StrictModes\s+
+            state: absent
+          check_mode: true
+          changed_when: false
+          register: dupes
+
+        - name: Deduplicate values from /etc/ssh/sshd_config
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: false
+            regexp: (?i)^\s*StrictModes\s+
+            state: absent
+          when: dupes.found is defined and dupes.found > 1
+
+        - name: Insert correct line to /etc/ssh/sshd_config
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: true
+            regexp: (?i)^\s*StrictModes\s+
+            line: StrictModes yes
+            state: present
+            insertbefore: ^[#\s]*Match
+            validate: /usr/sbin/sshd -t -f %s
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

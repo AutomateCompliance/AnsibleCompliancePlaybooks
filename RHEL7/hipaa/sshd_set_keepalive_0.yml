@@ -1,0 +1,59 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Set SSH Client Alive Count Max to zero
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83399-6
+    - CJIS-5.5.6
+    - DISA-STIG-RHEL-07-040340
+    - NIST-800-171-3.1.11
+    - NIST-800-53-AC-12
+    - NIST-800-53-AC-17(a)
+    - NIST-800-53-AC-2(5)
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-SC-10
+    - PCI-DSS-Req-8.1.8
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+    - sshd_set_keepalive_0
+  tasks:
+
+    - name: Set SSH Client Alive Count Max to zero
+      block:
+
+        - name: Check for duplicate values
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: false
+            regexp: (?i)^\s*ClientAliveCountMax\s+
+            state: absent
+          check_mode: true
+          changed_when: false
+          register: dupes
+
+        - name: Deduplicate values from /etc/ssh/sshd_config
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: false
+            regexp: (?i)^\s*ClientAliveCountMax\s+
+            state: absent
+          when: dupes.found is defined and dupes.found > 1
+
+        - name: Insert correct line to /etc/ssh/sshd_config
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: true
+            regexp: (?i)^\s*ClientAliveCountMax\s+
+            line: ClientAliveCountMax 0
+            state: present
+            insertbefore: ^[#\s]*Match
+            validate: /usr/sbin/sshd -t -f %s
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

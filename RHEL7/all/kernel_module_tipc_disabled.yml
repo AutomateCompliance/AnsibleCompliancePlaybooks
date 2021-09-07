@@ -1,0 +1,29 @@
+# platform = multi_platform_rhel,multi_platform_fedora,multi_platform_ol,multi_platform_rhv,multi_platform_ubuntu,multi_platform_sle
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Disable TIPC Support
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83395-4
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-CM-7(a)
+    - NIST-800-53-CM-7(b)
+    - disable_strategy
+    - kernel_module_tipc_disabled
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - reboot_required
+  tasks:
+
+    - name: Ensure kernel module 'tipc' is disabled
+      lineinfile:
+        create: true
+        dest: /etc/modprobe.d/tipc.conf
+        regexp: tipc
+        line: install tipc /bin/true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

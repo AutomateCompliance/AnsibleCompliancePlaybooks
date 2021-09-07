@@ -1,0 +1,31 @@
+# platform = multi_platform_all
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Enable Randomized Layout of Virtual Address Space
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-27127-0
+    - DISA-STIG-RHEL-07-040201
+    - NIST-800-171-3.1.7
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-SC-30
+    - NIST-800-53-SC-30(2)
+    - disable_strategy
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - reboot_required
+    - sysctl_kernel_randomize_va_space
+  tasks:
+
+    - name: Ensure sysctl kernel.randomize_va_space is set to 2
+      sysctl:
+        name: kernel.randomize_va_space
+        value: '2'
+        state: present
+        reload: true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

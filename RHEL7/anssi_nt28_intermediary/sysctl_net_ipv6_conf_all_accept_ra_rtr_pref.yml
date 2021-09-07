@@ -1,0 +1,29 @@
+# platform = multi_platform_all
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Configure Accepting Router Preference in Router Advertisements on All IPv6
+    Interfaces
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    sysctl_net_ipv6_conf_all_accept_ra_rtr_pref_value: '0'
+  tags:
+    - CCE-84287-2
+    - disable_strategy
+    - low_complexity
+    - medium_disruption
+    - reboot_required
+    - sysctl_net_ipv6_conf_all_accept_ra_rtr_pref
+    - unknown_severity
+  tasks:
+
+    - name: Ensure sysctl net.ipv6.conf.all.accept_ra_rtr_pref is set
+      sysctl:
+        name: net.ipv6.conf.all.accept_ra_rtr_pref
+        value: '{{ sysctl_net_ipv6_conf_all_accept_ra_rtr_pref_value }}'
+        state: present
+        reload: true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

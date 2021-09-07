@@ -1,0 +1,22 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = disable
+# complexity = low
+# disruption = low
+- name: Ensure LDAP client is not installed
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-82884-8
+    - disable_strategy
+    - low_complexity
+    - low_disruption
+    - low_severity
+    - no_reboot_needed
+    - package_openldap-clients_removed
+  tasks:
+
+    - name: Ensure openldap-clients is removed
+      package:
+        name: openldap-clients
+        state: absent

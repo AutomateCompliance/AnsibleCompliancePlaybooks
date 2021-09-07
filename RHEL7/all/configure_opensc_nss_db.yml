@@ -1,0 +1,49 @@
+# platform = Red Hat Enterprise Linux 7,multi_platform_fedora,Oracle Linux 7
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Configure NSS DB To Use opensc
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80567-1
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-IA-2(1)
+    - NIST-800-53-IA-2(11)
+    - NIST-800-53-IA-2(2)
+    - NIST-800-53-IA-2(3)
+    - NIST-800-53-IA-2(4)
+    - NIST-800-53-IA-2(6)
+    - NIST-800-53-IA-2(7)
+    - PCI-DSS-Req-8.3
+    - configure_opensc_nss_db
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+  tasks:
+
+    - name: Check existence of pkcs11-switch
+      stat:
+        path: /usr/bin/pkcs11-switch
+      register: pkcs11switch
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Get NSS database smart card configuration
+      command: /usr/bin/pkcs11-switch
+      changed_when: true
+      register: pkcsw_output
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - pkcs11switch.stat.exists
+
+    - name: Configure NSS DB To Use opensc
+      command: /usr/bin/pkcs11-switch opensc
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - pkcs11switch.stat.exists and pkcsw_output.stdout != "opensc"

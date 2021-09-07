@@ -1,0 +1,26 @@
+# platform = multi_platform_rhel,multi_platform_fedora,multi_platform_ol,multi_platform_rhv,multi_platform_ubuntu,multi_platform_sle
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Disable ATM Support
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-82162-9
+    - disable_strategy
+    - kernel_module_atm_disabled
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - reboot_required
+  tasks:
+
+    - name: Ensure kernel module 'atm' is disabled
+      lineinfile:
+        create: true
+        dest: /etc/modprobe.d/atm.conf
+        regexp: atm
+        line: install atm /bin/true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

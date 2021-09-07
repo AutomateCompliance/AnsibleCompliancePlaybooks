@@ -1,0 +1,41 @@
+# platform = multi_platform_rhel,multi_platform_rhv,multi_platform_fedora,multi_platform_ol,SUSE Linux Enterprise 15
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Ensure SELinux Not Disabled in /etc/default/grub
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-26961-3
+    - NIST-800-171-3.1.2
+    - NIST-800-171-3.7.2
+    - NIST-800-53-AC-3
+    - NIST-800-53-AC-3(3)(a)
+    - grub2_enable_selinux
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+  tasks:
+
+    - name: Find /etc/grub.d/ files
+      find:
+        paths:
+          - /etc/grub.d/
+        follow: true
+      register: grub
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Ensure SELinux Not Disabled in grub files
+      replace:
+        dest: '{{ item.path }}'
+        regexp: (selinux|enforcing)=0
+      with_items:
+        - '{{ grub.files }}'
+        - path: /etc/grub2.cfg
+        - path: /etc/default/grub
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

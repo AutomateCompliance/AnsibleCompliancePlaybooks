@@ -1,0 +1,100 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Record Attempts to Alter the localtime File
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-27310-2
+    - CJIS-5.4.1.1
+    - NIST-800-171-3.1.7
+    - NIST-800-53-AC-6(9)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-CM-6(a)
+    - PCI-DSS-Req-10.4.2.b
+    - audit_rules_time_watch_localtime
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+  tasks:
+
+    - name: Check if watch rule for /etc/localtime already exists in /etc/audit/rules.d/
+      find:
+        paths: /etc/audit/rules.d
+        contains: ^\s*-w\s+/etc/localtime\s+-p\s+wa(\s|$)+
+        patterns: '*.rules'
+      register: find_existing_watch_rules_d
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Search /etc/audit/rules.d for other rules with specified key audit_time_rules
+      find:
+        paths: /etc/audit/rules.d
+        contains: ^.*(?:-F key=|-k\s+)audit_time_rules$
+        patterns: '*.rules'
+      register: find_watch_key
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - find_existing_watch_rules_d.matched is defined and find_existing_watch_rules_d.matched
+          == 0
+
+    - name: Use /etc/audit/rules.d/audit_time_rules.rules as the recipient for the
+        rule
+      set_fact:
+        all_files:
+          - /etc/audit/rules.d/audit_time_rules.rules
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - find_watch_key.matched is defined and find_watch_key.matched == 0 and find_existing_watch_rules_d.matched
+          is defined and find_existing_watch_rules_d.matched == 0
+
+    - name: Use matched file as the recipient for the rule
+      set_fact:
+        all_files:
+          - '{{ find_watch_key.files | map(attribute=''path'') | list | first }}'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - find_watch_key.matched is defined and find_watch_key.matched > 0 and find_existing_watch_rules_d.matched
+          is defined and find_existing_watch_rules_d.matched == 0
+
+    - name: Add watch rule for /etc/localtime in /etc/audit/rules.d/
+      lineinfile:
+        path: '{{ all_files[0] }}'
+        line: -w /etc/localtime -p wa -k audit_time_rules
+        create: true
+        mode: '0640'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - find_existing_watch_rules_d.matched is defined and find_existing_watch_rules_d.matched
+          == 0
+
+    - name: Check if watch rule for /etc/localtime already exists in /etc/audit/audit.rules
+      find:
+        paths: /etc/audit/
+        contains: ^\s*-w\s+/etc/localtime\s+-p\s+wa(\s|$)+
+        patterns: audit.rules
+      register: find_existing_watch_audit_rules
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Add watch rule for /etc/localtime in /etc/audit/audit.rules
+      lineinfile:
+        line: -w /etc/localtime -p wa -k audit_time_rules
+        state: present
+        dest: /etc/audit/audit.rules
+        create: true
+        mode: '0640'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - find_existing_watch_audit_rules.matched is defined and find_existing_watch_audit_rules.matched
+          == 0

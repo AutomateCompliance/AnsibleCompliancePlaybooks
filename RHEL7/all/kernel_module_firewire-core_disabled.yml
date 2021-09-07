@@ -1,0 +1,26 @@
+# platform = multi_platform_rhel,multi_platform_fedora,multi_platform_ol,multi_platform_rhv,multi_platform_ubuntu,multi_platform_sle
+# reboot = true
+# strategy = disable
+# complexity = low
+# disruption = medium
+- name: Disable IEEE 1394 (FireWire) Support
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-82160-3
+    - disable_strategy
+    - kernel_module_firewire-core_disabled
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - reboot_required
+  tasks:
+
+    - name: Ensure kernel module 'firewire-core' is disabled
+      lineinfile:
+        create: true
+        dest: /etc/modprobe.d/firewire-core.conf
+        regexp: firewire-core
+        line: install firewire-core /bin/true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

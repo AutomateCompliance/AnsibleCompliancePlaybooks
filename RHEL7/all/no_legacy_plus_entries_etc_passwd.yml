@@ -1,0 +1,29 @@
+# platform = multi_platform_fedora,Red Hat OpenShift Container Platform 4,Oracle Linux 7,Oracle Linux 8,Red Hat Enterprise Linux 7,Red Hat Enterprise Linux 8,Red Hat Virtualization 4
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = medium
+- name: Ensure there are no legacy + NIS entries in /etc/passwd
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-82889-7
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - no_legacy_plus_entries_etc_passwd
+    - no_reboot_needed
+    - restrict_strategy
+  tasks:
+
+    - name: Backup the old /etc/passwd file
+      copy:
+        src: /etc/passwd
+        dest: /etc/passwd-
+        remote_src: true
+
+    - name: Remove lines starting with + from /etc/passwd
+      lineinfile:
+        regexp: ^\+.*$
+        state: absent
+        path: /etc/passwd

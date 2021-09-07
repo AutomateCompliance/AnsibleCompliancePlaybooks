@@ -1,0 +1,58 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = disable
+# complexity = low
+# disruption = low
+- name: Disable Control Group Rules Engine (cgred)
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80255-3
+    - NIST-800-53-CM-6(a)
+    - NIST-800-53-CM-7(a)
+    - NIST-800-53-CM-7(b)
+    - disable_strategy
+    - low_complexity
+    - low_disruption
+    - low_severity
+    - no_reboot_needed
+    - service_cgred_disabled
+  tasks:
+
+    - name: Disable service cgred
+      block:
+
+        - name: Gather the service facts
+          service_facts: null
+
+        - name: Disable service cgred
+          systemd:
+            name: cgred.service
+            enabled: 'no'
+            state: stopped
+            masked: 'yes'
+          when: '"cgred.service" in ansible_facts.services'
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Unit Socket Exists - cgred.socket
+      command: systemctl list-unit-files cgred.socket
+      args:
+        warn: false
+      register: socket_file_exists
+      changed_when: false
+      ignore_errors: true
+      check_mode: false
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Disable socket cgred
+      systemd:
+        name: cgred.socket
+        enabled: 'no'
+        state: stopped
+        masked: 'yes'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - '"cgred.socket" in socket_file_exists.stdout_lines[1]'

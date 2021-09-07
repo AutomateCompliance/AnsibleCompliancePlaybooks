@@ -1,0 +1,90 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Ensure auditd Collects System Administrator Actions
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-27461-3
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030700
+    - NIST-800-171-3.1.7
+    - NIST-800-53-AC-2(7)(b)
+    - NIST-800-53-AC-6(9)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-CM-6(a)
+    - PCI-DSS-Req-10.2.2
+    - PCI-DSS-Req-10.2.5.b
+    - audit_rules_sysadmin_actions
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+  tasks:
+
+    - name: Search /etc/audit/rules.d for audit rule entries for sysadmin actions
+      find:
+        paths: /etc/audit/rules.d
+        recurse: false
+        contains: ^.*/etc/sudoers.*$
+        patterns: '*.rules'
+      register: find_audit_sysadmin_actions
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Use /etc/audit/rules.d/actions.rules as the recipient for the rule
+      set_fact:
+        all_sysadmin_actions_files:
+          - /etc/audit/rules.d/actions.rules
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - find_audit_sysadmin_actions.matched is defined and find_audit_sysadmin_actions.matched
+          == 0
+
+    - name: Use matched file as the recipient for the rule
+      set_fact:
+        all_sysadmin_actions_files:
+          - '{{ find_audit_sysadmin_actions.files | map(attribute=''path'') | list
+            | first }}'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - find_audit_sysadmin_actions.matched is defined and find_audit_sysadmin_actions.matched
+          > 0
+
+    - name: Inserts/replaces audit rule for /etc/sudoers rule in rules.d
+      lineinfile:
+        path: '{{ all_sysadmin_actions_files[0] }}'
+        line: -w /etc/sudoers -p wa -k actions
+        create: true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Inserts/replaces audit rule for /etc/sudoers.d rule in rules.d
+      lineinfile:
+        path: '{{ all_sysadmin_actions_files[0] }}'
+        line: -w /etc/sudoers.d/ -p wa -k actions
+        create: true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Inserts/replaces audit rule for /etc/sudoers in audit.rules
+      lineinfile:
+        path: /etc/audit/audit.rules
+        line: -w /etc/sudoers -p wa -k actions
+        create: true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Inserts/replaces audit rule for /etc/sudoers.d in audit.rules
+      lineinfile:
+        path: /etc/audit/audit.rules
+        line: -w /etc/sudoers.d/ -p wa -k actions
+        create: true
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

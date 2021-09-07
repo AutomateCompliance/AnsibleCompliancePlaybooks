@@ -1,0 +1,34 @@
+# platform = Red Hat Virtualization 4,multi_platform_rhel,multi_platform_sle,multi_platform_ol
+# disruption = low
+# strategy = restrict
+# complexity = low
+# reboot = true
+- name: Ensure the Logon Failure Delay is Set Correctly in login.defs
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_accounts_fail_delay: '4'
+  tags:
+    - CCE-80352-8
+    - DISA-STIG-RHEL-07-010430
+    - NIST-800-53-AC-7(b)
+    - NIST-800-53-CM-6(a)
+    - accounts_logon_fail_delay
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - reboot_required
+    - restrict_strategy
+  tasks:
+
+    - name: Gather the package facts
+      package_facts:
+        manager: auto
+
+    - name: Set accounts logon fail delay
+      lineinfile:
+        dest: /etc/login.defs
+        regexp: ^FAIL_DELAY
+        line: FAIL_DELAY {{ var_accounts_fail_delay }}
+        create: true
+      when: '"shadow-utils" in ansible_facts.packages'

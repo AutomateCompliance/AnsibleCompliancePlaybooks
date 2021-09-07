@@ -1,0 +1,43 @@
+# platform = Red Hat Enterprise Linux 7,multi_platform_fedora
+# reboot = false
+# complexity = low
+# strategy = configure
+# disruption = low
+- name: Configure server restrictions for ntpd
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-84299-7
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - ntpd_configure_restrictions
+  tasks:
+
+    - name: Gather the package facts
+      package_facts:
+        manager: auto
+
+    - name: configure ipv4 restrictions for ntpd
+      lineinfile:
+        path: /etc/ntp.conf
+        create: true
+        line: restrict -4 default kod nomodify notrap nopeer noquery
+        state: present
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - '"ntp" in ansible_facts.packages'
+
+    - name: configure ipv6 restrictions for ntpd
+      lineinfile:
+        path: /etc/ntp.conf
+        create: true
+        line: restrict -6 default kod nomodify notrap nopeer noquery
+        state: present
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - '"ntp" in ansible_facts.packages'

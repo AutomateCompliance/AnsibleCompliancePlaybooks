@@ -1,0 +1,58 @@
+# platform = multi_platform_rhel,multi_platform_fedora,multi_platform_ol,multi_platform_sle
+# reboot = false
+# strategy = unknown
+# complexity = low
+# disruption = medium
+- name: Implement Blank Screensaver
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80113-4
+    - CJIS-5.5.5
+    - NIST-800-171-3.1.10
+    - NIST-800-53-AC-11(1)
+    - NIST-800-53-AC-11(1).1
+    - NIST-800-53-CM-6(a)
+    - PCI-DSS-Req-8.1.8
+    - dconf_gnome_screensaver_mode_blank
+    - low_complexity
+    - medium_disruption
+    - medium_severity
+    - no_reboot_needed
+    - unknown_strategy
+  tasks:
+
+    - name: Gather the package facts
+      package_facts:
+        manager: auto
+
+    - name: Implement Blank Screensaver
+      ini_file:
+        dest: /etc/dconf/db/local.d/00-security-settings
+        section: org/gnome/desktop/screensaver
+        option: picture-uri
+        value: string ''
+        create: true
+        no_extra_spaces: true
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+
+    - name: Prevent user modification of GNOME picture-uri
+      lineinfile:
+        path: /etc/dconf/db/local.d/locks/00-security-settings-lock
+        regexp: ^/org/gnome/desktop/screensaver/picture-uri$
+        line: /org/gnome/desktop/screensaver/picture-uri
+        create: true
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+
+    - name: Dconf Update
+      command: dconf update
+      when:
+        - '"gdm" in ansible_facts.packages'
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]

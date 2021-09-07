@@ -1,0 +1,55 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = disable
+# complexity = low
+# disruption = low
+- name: Disable Samba
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80277-7
+    - disable_strategy
+    - low_complexity
+    - low_disruption
+    - low_severity
+    - no_reboot_needed
+    - service_smb_disabled
+  tasks:
+
+    - name: Disable service smb
+      block:
+
+        - name: Gather the service facts
+          service_facts: null
+
+        - name: Disable service smb
+          systemd:
+            name: smb.service
+            enabled: 'no'
+            state: stopped
+            masked: 'yes'
+          when: '"smb.service" in ansible_facts.services'
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Unit Socket Exists - smb.socket
+      command: systemctl list-unit-files smb.socket
+      args:
+        warn: false
+      register: socket_file_exists
+      changed_when: false
+      ignore_errors: true
+      check_mode: false
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Disable socket smb
+      systemd:
+        name: smb.socket
+        enabled: 'no'
+        state: stopped
+        masked: 'yes'
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - '"smb.socket" in socket_file_exists.stdout_lines[1]'

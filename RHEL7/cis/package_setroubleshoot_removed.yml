@@ -1,0 +1,24 @@
+# platform = multi_platform_all
+# reboot = false
+# strategy = disable
+# complexity = low
+# disruption = low
+- name: Uninstall setroubleshoot Package
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-80444-3
+    - disable_strategy
+    - low_complexity
+    - low_disruption
+    - low_severity
+    - no_reboot_needed
+    - package_setroubleshoot_removed
+  tasks:
+
+    - name: Ensure setroubleshoot is removed
+      package:
+        name: setroubleshoot
+        state: absent
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

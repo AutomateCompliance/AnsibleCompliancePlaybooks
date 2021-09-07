@@ -1,0 +1,57 @@
+# platform = multi_platform_all,multi_platform_sle
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Enable Use of Privilege Separation
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_sshd_priv_separation: sandbox
+  tags:
+    - CCE-80223-1
+    - DISA-STIG-RHEL-07-040460
+    - NIST-800-171-3.1.12
+    - NIST-800-53-AC-17(a)
+    - NIST-800-53-AC-6
+    - NIST-800-53-CM-6(a)
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+    - sshd_use_priv_separation
+  tasks:
+
+    - name: Enable Use of Privilege Separation
+      block:
+
+        - name: Check for duplicate values
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: false
+            regexp: (?i)^\s*UsePrivilegeSeparation\s+
+            state: absent
+          check_mode: true
+          changed_when: false
+          register: dupes
+
+        - name: Deduplicate values from /etc/ssh/sshd_config
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: false
+            regexp: (?i)^\s*UsePrivilegeSeparation\s+
+            state: absent
+          when: dupes.found is defined and dupes.found > 1
+
+        - name: Insert correct line to /etc/ssh/sshd_config
+          lineinfile:
+            path: /etc/ssh/sshd_config
+            create: true
+            regexp: (?i)^\s*UsePrivilegeSeparation\s+
+            line: UsePrivilegeSeparation {{ var_sshd_priv_separation }}
+            state: present
+            insertbefore: ^[#\s]*Match
+            validate: /usr/sbin/sshd -t -f %s
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

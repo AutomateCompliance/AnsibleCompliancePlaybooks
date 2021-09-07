@@ -1,0 +1,30 @@
+# platform = Red Hat Virtualization 4,multi_platform_fedora,multi_platform_ol,multi_platform_rhel,multi_platform_wrlinux,multi_platform_sle
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Configure audispd Plugin To Send Logs To Remote Server
+  hosts: '@@HOSTS@@'
+  become: true
+  vars:
+    var_audispd_remote_server: logcollector
+  tags:
+    - CCE-80541-6
+    - DISA-STIG-RHEL-07-030300
+    - auditd_audispd_configure_remote_server
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+  tasks:
+
+    - name: Make sure that a remote server is configured for Audispd
+      lineinfile:
+        path: /etc/audisp/audisp-remote.conf
+        line: remote_server = {{ var_audispd_remote_server }}
+        regexp: ^\s*remote_server\s*=.*$
+        create: true
+        state: present
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]

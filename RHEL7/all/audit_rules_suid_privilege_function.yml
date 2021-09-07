@@ -1,0 +1,81 @@
+# platform = multi_platform_rhel,multi_platform_sle
+# reboot = false
+# strategy = restrict
+# complexity = low
+# disruption = low
+- name: Record Events When Privileged Executables Are Run
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-83555-3
+    - DISA-STIG-RHEL-07-030360
+    - NIST-800-53-AC-6(9)
+    - NIST-800-53-AU-12(3)
+    - NIST-800-53-AU-7(a)
+    - NIST-800-53-AU-7(b)
+    - NIST-800-53-AU-8(b)
+    - NIST-800-53-CM-5(1)
+    - audit_rules_suid_privilege_function
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - restrict_strategy
+  tasks:
+
+    - name: Service facts
+      service_facts: null
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Check the rules script being used
+      command: grep '^ExecStartPost' /usr/lib/systemd/system/auditd.service
+      register: check_rules_scripts_result
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Set suid_audit_rules fact
+      set_fact:
+        suid_audit_rules:
+          - -a always,exit -F arch=b32 -S execve -C gid!=egid -F egid=0 -k setgid
+          - -a always,exit -F arch=b64 -S execve -C gid!=egid -F egid=0 -k setgid
+          - -a always,exit -F arch=b32 -S execve -C uid!=euid -F euid=0 -k setuid
+          - -a always,exit -F arch=b64 -S execve -C uid!=euid -F euid=0 -k setuid
+      when: ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+        "container"]
+
+    - name: Update /etc/audit/rules.d/privileged.rules to audit privileged functions
+      lineinfile:
+        path: /etc/audit/rules.d/privileged.rules
+        line: '{{  item  }}'
+        create: true
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - '"auditd.service" in ansible_facts.services'
+        - '"augenrules" in check_rules_scripts_result.stdout'
+      register: augenrules_audit_rules_privilege_function_update_result
+      with_items: '{{ suid_audit_rules }}'
+
+    - name: Update Update /etc/audit/audit.rules to audit privileged functions
+      lineinfile:
+        path: /etc/audit/audit.rules
+        line: '{{  item  }}'
+        create: true
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - '"auditd.service" in ansible_facts.services'
+        - '"auditctl" in check_rules_scripts_result.stdout'
+      register: auditctl_audit_rules_privilege_function_update_result
+      with_items: '{{ suid_audit_rules }}'
+
+    - name: Reload Auditd
+      command: /usr/sbin/service auditd reload
+      args:
+        warn: false
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - (augenrules_audit_rules_privilege_function_update_result.changed or auditctl_audit_rules_privilege_function_update_result.changed)
+        - ansible_facts.services["auditd.service"].state == "running"

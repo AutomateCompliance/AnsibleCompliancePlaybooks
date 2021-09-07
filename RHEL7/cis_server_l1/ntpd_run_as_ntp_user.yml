@@ -1,0 +1,59 @@
+# platform = multi_platform_fedora,Red Hat Enterprise Linux 7
+# reboot = false
+# strategy = configure
+# complexity = low
+# disruption = low
+- name: Configure ntpd To Run As ntp User
+  hosts: '@@HOSTS@@'
+  become: true
+  tags:
+    - CCE-84295-5
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - medium_severity
+    - no_reboot_needed
+    - ntpd_run_as_ntp_user
+  tasks:
+
+    - name: Gather the package facts
+      package_facts:
+        manager: auto
+
+    - name: detect if file is not empty or missing
+      find:
+        path: /etc/sysconfig/
+        patterns: ntpd
+        contains: ^([\s]*OPTIONS=["]?[^"]*)("?)
+      register: ntpd_file
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - '"ntp" in ansible_facts.packages'
+
+    - name: replace existing setting or create a new file, rest is handled by different
+        task
+      lineinfile:
+        path: /etc/sysconfig/ntpd
+        regexp: ^([\s]*OPTIONS=["]?[^"]*)("?)
+        line: \1 -u ntp:ntp\2
+        state: present
+        create: true
+        backrefs: true
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - '"ntp" in ansible_facts.packages'
+        - ntpd_file.matched > 0
+
+    - name: put line into file, assume file was empty
+      lineinfile:
+        path: /etc/sysconfig/ntpd
+        line: OPTIONS="-u ntp:ntp"
+        state: present
+        create: true
+      when:
+        - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman",
+          "container"]
+        - '"ntp" in ansible_facts.packages'
+        - ntpd_file.matched == 0
